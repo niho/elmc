@@ -95,6 +95,31 @@ elm_ast_val_t *elm_ast_list_cons(int i, elm_ast_val_t **xs) {
     return node;
 }
 
+elm_ast_val_t *elm_ast_tuple(int i, elm_ast_val_t **xs) {
+    elm_ast_t *node = elm_ast_new(ELM_AST_TUPLE, NULL);
+    for (int x = 0; x < i; x++) {
+        elm_ast_add_child(node, xs[x]);
+    }
+    return node;
+}
+
+elm_ast_val_t *elm_ast_tuple_cons(int i, elm_ast_val_t **xs) {
+    elm_ast_t *node = elm_ast_new(ELM_AST_TUPLE, NULL);
+    for (int x = 0; x < i; x++) {
+        elm_ast_t *nx = (elm_ast_t *)xs[x];
+        if (nx->tag == ELM_AST_TUPLE) {
+            for (int y = 0; y < nx->children_num; y++) {
+                elm_ast_add_child(node, nx->children[y]);
+            }
+            elm_ast_delete_no_children(nx);
+        } else {
+            elm_ast_add_child(node, xs[x]);
+        }
+    }
+    return node;
+}
+
+
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs) {
     elm_ast_t *node = elm_ast_new(ELM_AST_MODULE, NULL);
     for (int x = 0; x < i; x++) {
@@ -144,6 +169,12 @@ void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp) {
             break;
         case ELM_AST_LIST:
             fprintf(fp, "list:\n");
+            for(int i = 0; i < a->children_num; i++) {
+                elm_ast_print_depth(a->children[i], d+1, fp);
+            }
+            break;
+        case ELM_AST_TUPLE:
+            fprintf(fp, "tuple:\n");
             for(int i = 0; i < a->children_num; i++) {
                 elm_ast_print_depth(a->children[i], d+1, fp);
             }
