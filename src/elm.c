@@ -151,6 +151,14 @@ static mpc_parser_t *elm_expr(mpc_parser_t *value) {
     return mpc_expect(mpc_many1(elm_ast_expr, mpc_tok(value)), "expression");
 }
 
+static mpc_parser_t *elm_list(mpc_parser_t *expr) {
+    return mpc_expect(
+            mpc_or(2,
+                mpc_tok_squares(mpc_many(elm_ast_list, expr), free),
+                mpc_tok_squares(mpc_and(2, elm_ast_list_cons, expr, mpc_many(elm_ast_list, mpc_and(2, mpcf_snd_free, mpc_tok(mpc_char(',')), expr, free)), free), free))
+            , "list");
+}
+
 /*
  * main.c
  */
@@ -176,8 +184,9 @@ static int handle_script(char **argv) {
     mpc_parser_t *CustomType = mpc_new("customtype");
     mpc_parser_t *TypeAlias = mpc_new("typealias");*/
     mpc_parser_t *Var    = mpc_new("variable");
-    mpc_parser_t *Expr   = mpc_new("expression");
     mpc_parser_t *Value  = mpc_new("value");
+    mpc_parser_t *Expr   = mpc_new("expression");
+    mpc_parser_t *List   = mpc_new("list");
     /*mpc_parser_t *Lexpr  = mpc_new("lexpr");
     mpc_parser_t *Prod   = mpc_new("product");
     mpc_parser_t *Value  = mpc_new("value");
@@ -195,11 +204,13 @@ static int handle_script(char **argv) {
     mpc_define(Char, mpc_apply(mpc_tok(mpc_char_lit()), elm_ast_char));
     mpc_define(String, mpc_apply(mpc_tok(mpc_string_lit()), elm_ast_string));
 
-    mpc_define(Literal, mpc_apply(mpc_or(5, True, False, mpc_or(2, Float, Number), Char, String), elm_ast_literal));
+    mpc_define(Literal, mpc_apply(mpc_or(6, True, False, mpc_or(2, Float, Number), Char, String, List), elm_ast_literal));
     mpc_define(Var, mpc_apply(mpc_tok(elm_variable()), elm_ast_variable));
 
     mpc_define(Value, mpc_tok(elm_value(Literal, Var, Expr)));
     mpc_define(Expr, mpc_tok(elm_expr(Value)));
+
+    mpc_define(List, mpc_tok(elm_list(Literal)));
 
     mpc_define(Elm,
         mpc_whole(

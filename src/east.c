@@ -11,6 +11,9 @@
 #include "east.h"
 
 
+static void elm_ast_delete_no_children(elm_ast_t *a);
+
+
 elm_ast_t *elm_ast_new(int tag, elm_ast_val_t *contents) {
     elm_ast_t *node = malloc(sizeof(elm_ast_t));
     node->tag = tag;
@@ -68,6 +71,30 @@ elm_ast_val_t *elm_ast_expr(int i, elm_ast_val_t **xs) {
     return node;
 }
 
+elm_ast_val_t *elm_ast_list(int i, elm_ast_val_t **xs) {
+    elm_ast_t *node = elm_ast_new(ELM_AST_LIST, NULL);
+    for (int x = 0; x < i; x++) {
+        elm_ast_add_child(node, xs[x]);
+    }
+    return node;
+}
+
+elm_ast_val_t *elm_ast_list_cons(int i, elm_ast_val_t **xs) {
+    elm_ast_t *node = elm_ast_new(ELM_AST_LIST, NULL);
+    for (int x = 0; x < i; x++) {
+        elm_ast_t *nx = (elm_ast_t *)xs[x];
+        if (nx->tag == ELM_AST_LIST) {
+            for (int y = 0; y < nx->children_num; y++) {
+                elm_ast_add_child(node, nx->children[y]);
+            }
+            elm_ast_delete_no_children(nx);
+        } else {
+            elm_ast_add_child(node, xs[x]);
+        }
+    }
+    return node;
+}
+
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs) {
     elm_ast_t *node = elm_ast_new(ELM_AST_MODULE, NULL);
     for (int x = 0; x < i; x++) {
@@ -115,6 +142,12 @@ void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp) {
                 elm_ast_print_depth(a->children[i], d+1, fp);
             }
             break;
+        case ELM_AST_LIST:
+            fprintf(fp, "list:\n");
+            for(int i = 0; i < a->children_num; i++) {
+                elm_ast_print_depth(a->children[i], d+1, fp);
+            }
+            break;
         case ELM_AST_MODULE:
             fprintf(fp, "module:\n");
             for(int i = 0; i < a->children_num; i++) {
@@ -142,6 +175,12 @@ void elm_ast_delete(elm_ast_t *a) {
         elm_ast_delete(a->children[i]);
     }
 
+    free(a->children);
+    free(a->contents);
+    free(a);
+}
+
+static void elm_ast_delete_no_children(elm_ast_t *a) {
     free(a->children);
     free(a->contents);
     free(a);
