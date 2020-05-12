@@ -52,16 +52,20 @@ elm_ast_val_t *elm_ast_string(elm_ast_val_t *x) {
     return elm_ast_new(ELM_AST_STRING, x);
 }
 
+elm_ast_val_t *elm_ast_literal(elm_ast_val_t *x) {
+    return elm_ast_expr(1, &x);
+}
+
+elm_ast_val_t *elm_ast_variable(elm_ast_val_t *x) {
+    return elm_ast_new(ELM_AST_VAR, x);
+}
+
 elm_ast_val_t *elm_ast_expr(int i, elm_ast_val_t **xs) {
     elm_ast_t *node = elm_ast_new(ELM_AST_EXPR, NULL);
     for (int x = 0; x < i; x++) {
         elm_ast_add_child(node, xs[x]);
     }
     return node;
-}
-
-elm_ast_val_t *elm_ast_literal(elm_ast_val_t *x) {
-    return elm_ast_expr(1, &x);
 }
 
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs) {
@@ -102,8 +106,8 @@ void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp) {
         case ELM_AST_STRING:
             fprintf(fp, "string: <%s>\n", (char*)a->contents);
             break;
-        case ELM_AST_IDENT:
-            fprintf(fp, "ident: <%s>\n", (char*)a->contents);
+        case ELM_AST_VAR:
+            fprintf(fp, "variable: <%s>\n", (char*)a->contents);
             break;
         case ELM_AST_EXPR:
             fprintf(fp, "expr:\n");

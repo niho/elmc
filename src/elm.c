@@ -28,8 +28,6 @@
 static const char *progname = ELM_PROGNAME;
 
 
-//static LexState state;
-
 static void print_usage(void) {
     printf("usage: %s [options] [script]\n"
             "Available options are:\n"
@@ -107,9 +105,9 @@ static mpc_parser_t *elm_multiline_comment(void) {
 }
 
 static mpc_parser_t *elm_comment(void) {
-    return mpc_or(2,
+    return mpc_expect(mpc_or(2,
             elm_multiline_comment(),
-            elm_singleline_comment());
+            elm_singleline_comment()), "comment");
 }
 
 static mpc_parser_t *elm_hex(void) {
@@ -141,12 +139,16 @@ static mpc_parser_t *elm_float(void) {
     return mpc_expect(mpc_apply(elm_real(), mpcf_float), "float");
 }
 
-static mpc_parser_t *elm_expr(mpc_parser_t *literal) {
-    return mpc_expect(mpc_or(2,
-                //mpc_and(2, x, variable, mpc_many1(elm_expr(literal))),
-                mpc_and(3, mpcf_snd_free, mpc_char('('), literal, mpc_char(')'), free, free),
-                literal
-                ), "expression");
+static mpc_parser_t *elm_variable(void) {
+    return mpc_re("[a-z_][a-zA-Z_0-9]*");
+}
+
+static mpc_parser_t *elm_value(mpc_parser_t *literal, mpc_parser_t *variable, mpc_parser_t *expr) {
+    return mpc_expect(mpc_or(3, literal, variable, mpc_tok_parens(expr, free)), "value");
+}
+
+static mpc_parser_t *elm_expr(mpc_parser_t *value) {
+    return mpc_expect(mpc_many1(elm_ast_expr, mpc_tok(value)), "expression");
 }
 
 /*
@@ -172,9 +174,10 @@ static int handle_script(char **argv) {
     mpc_parser_t *TypeDecl  = mpc_new("typedecl");
     mpc_parser_t *Type   = mpc_new("type");
     mpc_parser_t *CustomType = mpc_new("customtype");
-    mpc_parser_t *TypeAlias = mpc_new("typealias");
-    mpc_parser_t *Var    = mpc_new("variable");*/
+    mpc_parser_t *TypeAlias = mpc_new("typealias");*/
+    mpc_parser_t *Var    = mpc_new("variable");
     mpc_parser_t *Expr   = mpc_new("expression");
+    mpc_parser_t *Value  = mpc_new("value");
     /*mpc_parser_t *Lexpr  = mpc_new("lexpr");
     mpc_parser_t *Prod   = mpc_new("product");
     mpc_parser_t *Value  = mpc_new("value");
@@ -192,16 +195,18 @@ static int handle_script(char **argv) {
     mpc_define(Char, mpc_apply(mpc_tok(mpc_char_lit()), elm_ast_char));
     mpc_define(String, mpc_apply(mpc_tok(mpc_string_lit()), elm_ast_string));
 
-    mpc_define(Literal, mpc_apply(mpc_or(6, True, False, Number, Float, Char, String), elm_ast_literal));
-    mpc_define(Expr, mpc_tok(elm_expr(Literal)));
+    mpc_define(Literal, mpc_apply(mpc_or(5, True, False, mpc_or(2, Float, Number), Char, String), elm_ast_literal));
+    mpc_define(Var, mpc_apply(mpc_tok(elm_variable()), elm_ast_variable));
+
+    mpc_define(Value, mpc_tok(elm_value(Literal, Var, Expr)));
+    mpc_define(Expr, mpc_tok(elm_expr(Value)));
 
     mpc_define(Elm,
         mpc_whole(
             mpc_many1(elm_ast_module,
                 mpc_or(2,
                     Comment,
-                    Literal
-                    //mpc_tok(mpc_ident())
+                    Expr
                 )
             ), free));
     

@@ -16,8 +16,8 @@ enum {
     ELM_AST_FLOAT,
     ELM_AST_CHAR,
     ELM_AST_STRING,
+    ELM_AST_VAR,
     ELM_AST_EXPR,
-    ELM_AST_IDENT,
     ELM_AST_MODULE
 };
 
@@ -42,8 +42,9 @@ elm_ast_val_t *elm_ast_number(elm_ast_val_t *x);
 elm_ast_val_t *elm_ast_float(elm_ast_val_t *x);
 elm_ast_val_t *elm_ast_char(elm_ast_val_t *x);
 elm_ast_val_t *elm_ast_string(elm_ast_val_t *x);
-elm_ast_val_t *elm_ast_expr(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_literal(elm_ast_val_t *x);
+elm_ast_val_t *elm_ast_variable(elm_ast_val_t *x);
+elm_ast_val_t *elm_ast_expr(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs);
 
 void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp);
