@@ -219,8 +219,8 @@ static int handle_script(char **argv) {
     mpc_define(Value, mpc_tok(elm_value(Literal, Var, Expr)));
     mpc_define(Expr, mpc_tok(elm_expr(Value)));
 
-    mpc_define(List, mpc_tok(elm_list(Literal)));
-    mpc_define(Tuple, mpc_tok(elm_tuple(Literal)));
+    mpc_define(List, mpc_tok(elm_list(Expr)));
+    mpc_define(Tuple, mpc_tok(elm_tuple(Expr)));
 
     mpc_define(Elm,
         mpc_whole(
