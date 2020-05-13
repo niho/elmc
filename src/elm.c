@@ -139,22 +139,30 @@ static mpc_parser_t *elm_float(void) {
     return mpc_expect(mpc_apply(elm_real(), mpcf_float), "float");
 }
 
-static int is_keyword(mpc_val_t **xs) {
+static int is_unreserved(mpc_val_t **xs) {
     if (strcmp(xs[0], "if") == 0)
         return 0;
     if (strcmp(xs[0], "then") == 0)
         return 0;
     if (strcmp(xs[0], "else") == 0)
         return 0;
+    if (strcmp(xs[0], "case") == 0)
+        return 0;
+    if (strcmp(xs[0], "of") == 0)
+        return 0;
+    if (strcmp(xs[0], "->") == 0)
+        return 0;
+    if (strcmp(xs[0], "_") == 0)
+        return 0;
     return 1;
 }
 
 static mpc_parser_t *elm_variable(void) {
-    return mpc_check(mpc_re("[a-z_][a-zA-Z_0-9]*"), free, is_keyword, "keyword-variable-collision");
+    return mpc_apply(mpc_check(mpc_re("[a-z_][a-zA-Z_0-9]*"), free, is_unreserved, "keyword-variable-collision"), elm_ast_variable);
 }
 
-static mpc_parser_t *elm_value(mpc_parser_t *expr, mpc_parser_t *literal, mpc_parser_t *variable, mpc_parser_t *ifthen) {
-    return mpc_expect(mpc_or(4, ifthen, literal, variable, mpc_tok_parens(expr, free)), "value");
+static mpc_parser_t *elm_value(mpc_parser_t *expr, mpc_parser_t *literal, mpc_parser_t *variable, mpc_parser_t *ifthen, mpc_parser_t *caseof) {
+    return mpc_expect(mpc_or(5, ifthen, caseof, literal, variable, mpc_tok_parens(expr, free)), "value");
 }
 
 static mpc_parser_t *elm_expr(mpc_parser_t *value) {
@@ -179,13 +187,34 @@ static mpc_parser_t *elm_tuple(mpc_parser_t *expr) {
 
 static mpc_parser_t *elm_if(mpc_parser_t *expr) {
     return mpc_and(6, elm_ast_if,
-            mpc_tok(mpc_string("if")),
-                expr,
-            mpc_tok(mpc_string("then")),
-                expr,
-            mpc_tok(mpc_string("else")),
-                expr,
+            mpc_sym("if"),
+                mpc_tok(expr),
+            mpc_sym("then"),
+                mpc_tok(expr),
+            mpc_sym("else"),
+                mpc_tok(expr),
             free, free, free, free, free);
+}
+
+static mpc_parser_t *elm_case_branch(mpc_parser_t *pattern, mpc_parser_t *expr) {
+    return mpc_and(3, elm_ast_branch, mpc_tok(pattern), mpc_sym("->"), mpc_tok_parens(expr, free), free, free);
+}
+
+static mpc_parser_t *elm_case(mpc_parser_t *expr, mpc_parser_t *pattern) {
+    return mpc_and(4, elm_ast_case,
+            mpc_sym("case"),
+                mpc_tok(expr),
+            mpc_sym("of"),
+                mpc_many1(elm_ast_branches, mpc_tok(elm_case_branch(pattern, expr))),
+            free, free, free);
+}
+
+static mpc_parser_t *elm_wildcard(void) {
+    return mpc_expect(mpc_apply(mpc_char('_'), elm_ast_wildcard), "wildcard");
+}
+
+static mpc_parser_t *elm_pattern(mpc_parser_t *literal) {
+    return mpc_or(2, literal, elm_wildcard());
 }
 
 /*
@@ -218,46 +247,44 @@ static int handle_script(char **argv) {
     mpc_parser_t *List   = mpc_new("list");
     mpc_parser_t *Tuple  = mpc_new("tuple");
     mpc_parser_t *If     = mpc_new("if");
+    mpc_parser_t *Case   = mpc_new("case");
     /*mpc_parser_t *Lexpr  = mpc_new("lexpr");
     mpc_parser_t *Prod   = mpc_new("product");
     mpc_parser_t *Value  = mpc_new("value");
     mpc_parser_t *Module = mpc_new("module");*/
     mpc_parser_t *Elm    = mpc_new("elm");
 
-    mpc_define(Comment, mpc_apply(mpc_tok(elm_comment()), elm_ast_comment));
+    mpc_define(Comment, mpc_apply(elm_comment(), elm_ast_comment));
 
     mpc_define(True, mpc_apply(mpc_sym("True"), elm_ast_bool));
     mpc_define(False, mpc_apply(mpc_sym("False"), elm_ast_bool));
 
-    mpc_define(Number, mpc_apply(mpc_tok(elm_number()), elm_ast_number));
-    mpc_define(Float, mpc_apply(mpc_tok(elm_float()), elm_ast_float));
+    mpc_define(Number, mpc_apply(elm_number(), elm_ast_number));
+    mpc_define(Float, mpc_apply(elm_float(), elm_ast_float));
 
-    mpc_define(Char, mpc_apply(mpc_tok(mpc_char_lit()), elm_ast_char));
-    mpc_define(String, mpc_apply(mpc_tok(mpc_string_lit()), elm_ast_string));
+    mpc_define(Char, mpc_apply(mpc_char_lit(), elm_ast_char));
+    mpc_define(String, mpc_apply(mpc_string_lit(), elm_ast_string));
 
     mpc_define(Literal, mpc_apply(mpc_or(7, True, False, mpc_or(2, Float, Number), Char, String, List, Tuple), elm_ast_literal));
-    mpc_define(Var, mpc_apply(mpc_tok(elm_variable()), elm_ast_variable));
+    mpc_define(Var, elm_variable());
 
-    mpc_define(Value, mpc_tok(elm_value(Expr, Literal, Var, If)));
-    mpc_define(Expr, mpc_tok(elm_expr(Value)));
+    mpc_define(Value, elm_value(Expr, Literal, Var, If, Case));
+    mpc_define(Expr, elm_expr(Value));
 
-    mpc_define(List, mpc_tok(elm_list(Expr)));
-    mpc_define(Tuple, mpc_tok(elm_tuple(Expr)));
+    mpc_define(List, elm_list(Expr));
+    mpc_define(Tuple, elm_tuple(Expr));
 
     mpc_define(If, elm_if(Expr));
+    mpc_define(Case, elm_case(Expr, elm_pattern(mpc_or(6, True, False, Float, Number, Char, String))));
 
     mpc_define(Elm,
         mpc_whole(
             mpc_many1(elm_ast_module,
                 mpc_or(2,
-                    Comment,
-                    Expr
+                    mpc_tok(Comment),
+                    mpc_tok(Expr)
                 )
             ), free));
-    
-    /*mpca_lang_contents(MPCA_LANG_DEFAULT | MPCA_LANG_WHITESPACE_SENSITIVE,
-        "./src/elm.grammar"
-        , Whitespace, Comment, True, False, Number, Float, Char, String, Literal, Var, Value, Expr, Type, CustomType, TypeAlias, ValueDecl, TypeDecl, Decl, Elm, NULL); */
 
     if (strcmp(argv[0], "-") == 0) {
         if (mpc_parse_pipe("<stdin>", stdin, Elm, &r)) {
