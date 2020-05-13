@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "east.h"
 
@@ -119,6 +120,17 @@ elm_ast_val_t *elm_ast_tuple_cons(int i, elm_ast_val_t **xs) {
     return node;
 }
 
+elm_ast_val_t *elm_ast_if(int i, elm_ast_val_t **xs) {
+    elm_ast_t *node = elm_ast_new(ELM_AST_IF, NULL);
+    assert(i == 6);
+    elm_ast_add_child(node, xs[1]);
+    elm_ast_add_child(node, xs[3]);
+    elm_ast_add_child(node, xs[5]);
+    free(xs[0]);
+    free(xs[2]);
+    free(xs[4]);
+    return node;
+}
 
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs) {
     elm_ast_t *node = elm_ast_new(ELM_AST_MODULE, NULL);
@@ -175,6 +187,12 @@ void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp) {
             break;
         case ELM_AST_TUPLE:
             fprintf(fp, "tuple:\n");
+            for(int i = 0; i < a->children_num; i++) {
+                elm_ast_print_depth(a->children[i], d+1, fp);
+            }
+            break;
+        case ELM_AST_IF:
+            fprintf(fp, "if:\n");
             for(int i = 0; i < a->children_num; i++) {
                 elm_ast_print_depth(a->children[i], d+1, fp);
             }

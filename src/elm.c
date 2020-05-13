@@ -139,12 +139,22 @@ static mpc_parser_t *elm_float(void) {
     return mpc_expect(mpc_apply(elm_real(), mpcf_float), "float");
 }
 
-static mpc_parser_t *elm_variable(void) {
-    return mpc_re("[a-z_][a-zA-Z_0-9]*");
+static int is_keyword(mpc_val_t **xs) {
+    if (strcmp(xs[0], "if") == 0)
+        return 0;
+    if (strcmp(xs[0], "then") == 0)
+        return 0;
+    if (strcmp(xs[0], "else") == 0)
+        return 0;
+    return 1;
 }
 
-static mpc_parser_t *elm_value(mpc_parser_t *literal, mpc_parser_t *variable, mpc_parser_t *expr) {
-    return mpc_expect(mpc_or(3, literal, variable, mpc_tok_parens(expr, free)), "value");
+static mpc_parser_t *elm_variable(void) {
+    return mpc_check(mpc_re("[a-z_][a-zA-Z_0-9]*"), free, is_keyword, "keyword-variable-collision");
+}
+
+static mpc_parser_t *elm_value(mpc_parser_t *expr, mpc_parser_t *literal, mpc_parser_t *variable, mpc_parser_t *ifthen) {
+    return mpc_expect(mpc_or(4, ifthen, literal, variable, mpc_tok_parens(expr, free)), "value");
 }
 
 static mpc_parser_t *elm_expr(mpc_parser_t *value) {
@@ -165,6 +175,17 @@ static mpc_parser_t *elm_tuple(mpc_parser_t *expr) {
                 mpc_tok_parens(mpc_many(elm_ast_tuple, expr), free),
                 mpc_tok_parens(mpc_and(2, elm_ast_tuple_cons, expr, mpc_many(elm_ast_tuple, mpc_and(2, mpcf_snd_free, mpc_tok(mpc_char(',')), expr, free)), free), free))
             , "tuple");
+}
+
+static mpc_parser_t *elm_if(mpc_parser_t *expr) {
+    return mpc_and(6, elm_ast_if,
+            mpc_tok(mpc_string("if")),
+                expr,
+            mpc_tok(mpc_string("then")),
+                expr,
+            mpc_tok(mpc_string("else")),
+                expr,
+            free, free, free, free, free);
 }
 
 /*
@@ -196,6 +217,7 @@ static int handle_script(char **argv) {
     mpc_parser_t *Expr   = mpc_new("expression");
     mpc_parser_t *List   = mpc_new("list");
     mpc_parser_t *Tuple  = mpc_new("tuple");
+    mpc_parser_t *If     = mpc_new("if");
     /*mpc_parser_t *Lexpr  = mpc_new("lexpr");
     mpc_parser_t *Prod   = mpc_new("product");
     mpc_parser_t *Value  = mpc_new("value");
@@ -216,11 +238,13 @@ static int handle_script(char **argv) {
     mpc_define(Literal, mpc_apply(mpc_or(7, True, False, mpc_or(2, Float, Number), Char, String, List, Tuple), elm_ast_literal));
     mpc_define(Var, mpc_apply(mpc_tok(elm_variable()), elm_ast_variable));
 
-    mpc_define(Value, mpc_tok(elm_value(Literal, Var, Expr)));
+    mpc_define(Value, mpc_tok(elm_value(Expr, Literal, Var, If)));
     mpc_define(Expr, mpc_tok(elm_expr(Value)));
 
     mpc_define(List, mpc_tok(elm_list(Expr)));
     mpc_define(Tuple, mpc_tok(elm_tuple(Expr)));
+
+    mpc_define(If, elm_if(Expr));
 
     mpc_define(Elm,
         mpc_whole(

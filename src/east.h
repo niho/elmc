@@ -20,6 +20,7 @@ enum {
     ELM_AST_EXPR,
     ELM_AST_LIST,
     ELM_AST_TUPLE,
+    ELM_AST_IF,
     ELM_AST_MODULE
 };
 
@@ -51,6 +52,7 @@ elm_ast_val_t *elm_ast_list(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_list_cons(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_tuple(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_tuple_cons(int i, elm_ast_val_t **xs);
+elm_ast_val_t *elm_ast_if(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs);
 
 void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp);
