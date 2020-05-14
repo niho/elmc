@@ -22,8 +22,8 @@ typedef struct elm_parser_t {
     mpc_parser_t *String;
     //mpc_parser_t *MultiStr = mpc_new("multistr");
     mpc_parser_t *Literal;
-    /*mpc_parser_t *Decl   = mpc_new("declaration");
-    mpc_parser_t *ValueDecl = mpc_new("valuedecl");
+    mpc_parser_t *Decl;
+    /*mpc_parser_t *ValueDecl = mpc_new("valuedecl");
     mpc_parser_t *TypeDecl  = mpc_new("typedecl");
     mpc_parser_t *Type   = mpc_new("type");
     mpc_parser_t *CustomType = mpc_new("customtype");
@@ -126,11 +126,13 @@ static int is_unreserved(mpc_val_t **xs) {
         return 0;
     if (strcmp(xs[0], "_") == 0)
         return 0;
+    if (strcmp(xs[0], "=") == 0)
+        return 0;
     return 1;
 }
 
 static mpc_parser_t *elm_variable(void) {
-    return mpc_apply(mpc_check(mpc_re("[a-z_][a-zA-Z_0-9]*"), free, is_unreserved, "keyword-variable-collision"), elm_ast_variable);
+    return mpc_expect(mpc_apply(mpc_check(mpc_re("[a-z_][a-zA-Z_0-9]*"), free, is_unreserved, "keyword-variable-collision"), elm_ast_variable), "variable");
 }
 
 static mpc_parser_t *elm_value(mpc_parser_t *expr, mpc_parser_t *literal, mpc_parser_t *variable, mpc_parser_t *ifthen, mpc_parser_t *caseof) {
@@ -189,12 +191,16 @@ static mpc_parser_t *elm_pattern(mpc_parser_t *literal) {
     return mpc_or(2, literal, elm_wildcard());
 }
 
-static mpc_parser_t *elm_module(mpc_parser_t *comment, mpc_parser_t *expr) {
+static mpc_parser_t *elm_declaration(mpc_parser_t *var, mpc_parser_t *expr) {
+    return mpc_and(3, elm_ast_decl, mpc_many1(elm_ast_func, mpc_tok(var)), mpc_sym("="), mpc_tok_parens(expr, free), free, free);
+}
+
+static mpc_parser_t *elm_module(mpc_parser_t *comment, mpc_parser_t *decl) {
     return mpc_whole(
             mpc_many1(elm_ast_module,
                 mpc_or(2,
                     mpc_tok(comment),
-                    mpc_tok(expr)
+                    mpc_tok(decl)
                 )
             ), free);
 }
@@ -212,8 +218,8 @@ static elm_parser_t *elm_parser_init(void) {
     p->String   = mpc_new("string");
     //p->MultiStr = mpc_new("multistr");
     p->Literal  = mpc_new("literal");
-    /*p->Decl   = mpc_new("declaration");
-    p->ValueDecl = mpc_new("valuedecl");
+    p->Decl     = mpc_new("declaration");
+    /*p->ValueDecl = mpc_new("valuedecl");
     p->TypeDecl  = mpc_new("typedecl");
     p->Type   = mpc_new("type");
     p->CustomType = mpc_new("customtype");
@@ -253,13 +259,15 @@ static elm_parser_t *elm_parser_init(void) {
     mpc_define(p->If, elm_if(p->Expr));
     mpc_define(p->Case, elm_case(p->Expr, elm_pattern(mpc_or(6, p->True, p->False, p->Float, p->Number, p->Char, p->String))));
 
-    mpc_define(p->Module, elm_module(p->Comment, p->Expr));
+    mpc_define(p->Decl, elm_declaration(p->Var, p->Expr));
+
+    mpc_define(p->Module, elm_module(p->Comment, p->Decl));
     
     return p;
 }
 
 static void elm_parser_cleanup(elm_parser_t *p) {
-    mpc_cleanup(16,
+    mpc_cleanup(17,
             p->Comment,
             p->True,
             p->False,
@@ -275,6 +283,7 @@ static void elm_parser_cleanup(elm_parser_t *p) {
             p->Tuple,
             p->If,
             p->Case,
+            p->Decl,
             p->Module);
 }
 

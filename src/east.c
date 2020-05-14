@@ -162,7 +162,7 @@ elm_ast_val_t *elm_ast_branches(int i, elm_ast_val_t **xs) {
 
 elm_ast_val_t *elm_ast_branch(int i, elm_ast_val_t **xs) {
     assert(i == 3);
-    //assert(((elm_ast_t *)(xs[2]))->tag == ELM_AST_EXPR);
+    assert(((elm_ast_t *)(xs[i - 1]))->tag == ELM_AST_EXPR);
 
     elm_ast_t *node = elm_ast_new(ELM_AST_BRANCH, NULL);
     elm_ast_add_child(node, xs[0]);
@@ -176,6 +176,39 @@ elm_ast_val_t *elm_ast_branch(int i, elm_ast_val_t **xs) {
 elm_ast_val_t *elm_ast_wildcard(elm_ast_val_t *x) {
     elm_ast_t *node = elm_ast_new(ELM_AST_WILDCARD, NULL);
     free(x);
+    return node;
+}
+
+elm_ast_val_t *elm_ast_decl(int i, elm_ast_val_t **xs) {
+    assert(i == 3);
+    assert(((elm_ast_t *)(xs[0]))->tag == ELM_AST_FUNC);
+    assert(((elm_ast_t *)(xs[2]))->tag == ELM_AST_EXPR);
+
+    elm_ast_t *node = elm_ast_new(ELM_AST_DECL, NULL);
+    elm_ast_add_child(node, xs[0]);
+    elm_ast_add_child(node, xs[2]);
+
+    free(xs[1]);
+
+    return node;
+}
+
+elm_ast_val_t *elm_ast_func(int i, elm_ast_val_t **xs) {
+    elm_ast_t *node = elm_ast_new(ELM_AST_FUNC, NULL);
+
+    assert(((elm_ast_t *)(xs[0]))->tag == ELM_AST_VAR);
+    assert(((elm_ast_t *)(xs[0]))->contents != NULL);
+
+    node->contents = malloc(sizeof(char) * strlen(((elm_ast_t *)(xs[0]))->contents));
+    strcpy(node->contents, ((elm_ast_t *)(xs[0]))->contents);
+    elm_ast_delete(xs[0]);
+
+    if (i > 1) {
+        for (int x = 1; x < i; x++) {
+            elm_ast_add_child(node, xs[x]);
+        }
+    }
+
     return node;
 }
 
@@ -258,6 +291,18 @@ void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp) {
             break;
         case ELM_AST_WILDCARD:
             fprintf(fp, "wildcard\n");
+            break;
+        case ELM_AST_DECL:
+            fprintf(fp, "declaration:\n");
+            for(int i = 0; i < a->children_num; i++) {
+                elm_ast_print_depth(a->children[i], d+1, fp);
+            }
+            break;
+        case ELM_AST_FUNC:
+            fprintf(fp, "function: <%s>\n", a->contents);
+            for(int i = 0; i < a->children_num; i++) {
+                elm_ast_print_depth(a->children[i], d+1, fp);
+            }
             break;
         case ELM_AST_MODULE:
             fprintf(fp, "module:\n");

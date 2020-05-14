@@ -24,6 +24,8 @@ enum {
     ELM_AST_CASE,
     ELM_AST_BRANCH,
     ELM_AST_WILDCARD,
+    ELM_AST_DECL,
+    ELM_AST_FUNC,
     ELM_AST_MODULE
 };
 
@@ -60,6 +62,8 @@ elm_ast_val_t *elm_ast_case(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_branches(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_branch(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_wildcard(elm_ast_val_t *x);
+elm_ast_val_t *elm_ast_decl(int i, elm_ast_val_t **xs);
+elm_ast_val_t *elm_ast_func(int i, elm_ast_val_t **xs);
 elm_ast_val_t *elm_ast_module(int i, elm_ast_val_t **xs);
 
 void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp);
