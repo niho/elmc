@@ -35,7 +35,8 @@ typedef struct elm_ast_t {
     int tag;
     union {
         elm_ast_val_t *contents;
-        int value;
+        int i;
+        float f;
     };
     int children_num;
     struct elm_ast_t** children;
@@ -71,6 +72,22 @@ void elm_ast_print_to(elm_ast_t *a, FILE *fp);
 void elm_ast_print(elm_ast_t *a);
 
 void elm_ast_delete(elm_ast_t *a);
+
+typedef enum {
+  ELM_AST_TRAV_ORDER_PRE,
+  ELM_AST_TRAV_ORDER_POST
+} elm_ast_trav_order_t;
+
+typedef struct elm_ast_trav_t {
+  elm_ast_t             *curr_node;
+  struct elm_ast_trav_t *parent;
+  int                    curr_child;
+  elm_ast_trav_order_t   order;
+} elm_ast_trav_t;
+
+elm_ast_trav_t *elm_ast_traverse_start(elm_ast_t *ast, elm_ast_trav_order_t order);
+elm_ast_t *elm_ast_traverse_next(elm_ast_trav_t **trav);
+void elm_ast_traverse_free(elm_ast_trav_t **trav);
 
 #endif
 

@@ -233,7 +233,7 @@ void elm_ast_print_depth(elm_ast_t *a, int d, FILE *fp) {
             fprintf(fp, "comment: <%s>\n", (char*)a->contents);
             break;
         case ELM_AST_BOOL:
-            if (a->value)
+            if (a->i)
                 fprintf(fp, "bool: <True>\n");
             else
                 fprintf(fp, "bool: <False>\n");
@@ -340,5 +340,67 @@ static void elm_ast_delete_no_children(elm_ast_t *a) {
     free(a->children);
     free(a->contents);
     free(a);
+}
+
+elm_ast_trav_t *elm_ast_traverse_start(elm_ast_t *ast, elm_ast_trav_order_t order) {
+    elm_ast_trav_t *trav;
+    trav = malloc(sizeof(elm_ast_trav_t));
+    trav->curr_node = ast;
+    trav->parent = NULL;
+    trav->curr_child = 0;
+    trav->order = order;
+    return trav;
+}
+
+elm_ast_t *elm_ast_traverse_next(elm_ast_trav_t **trav) {
+    elm_ast_trav_t *n_trav, *to_free;
+    elm_ast_t *ret = NULL;
+    int cchild;
+
+    if(*trav == NULL) return NULL;
+
+    switch((*trav)->order) {
+        case ELM_AST_TRAV_ORDER_PRE:
+            ret = (*trav)->curr_node;
+            
+            while(*trav != NULL &&
+                    (*trav)->curr_child >= (*trav)->curr_node->children_num)
+            {
+                to_free = *trav;
+                *trav = (*trav)->parent;
+                free(to_free);
+            }
+            
+            if(*trav == NULL) {
+                break;
+            }
+
+            n_trav = malloc(sizeof(elm_ast_trav_t));
+
+            cchild = (*trav)->curr_child;
+            n_trav->curr_node = (*trav)->curr_node->children[cchild];
+            n_trav->parent = *trav;
+            n_trav->curr_child = 0;
+            n_trav->order = (*trav)->order;
+
+            (*trav)->curr_child++;
+            *trav = n_trav;
+
+            break;
+        case ELM_AST_TRAV_ORDER_POST:
+            break;
+    }
+
+    return ret;
+}
+
+void elm_ast_traverse_free(elm_ast_trav_t **trav) {
+    elm_ast_trav_t *n_trav;
+
+    while(*trav != NULL) {
+        n_trav = (*trav)->parent;
+        free(*trav);
+        *trav = n_trav;
+    }
 }
 
