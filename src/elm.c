@@ -10,6 +10,8 @@
 #include "ezio.h"
 #include "east.h"
 #include "eparse.h"
+#include "ecode.h"
+#include "evm.h"
 
 #ifndef ELM_PROGNAME
 #define ELM_PROGNAME    "elmc"
@@ -86,7 +88,15 @@ static int handle_script(char **argv) {
     } else {
         if (elm_parse_contents(fname, &r)) {
             elm_ast_print(r.output);
+
+            elmK_func_state_t *fs = elmK_func_state();
+            elmK_generate(fs, r.output);
+            elmK_print_asm(fs);
+
             elm_ast_delete(r.output);
+
+            elm_state_t *E = elm_newstate();
+            elm_execute(E, fs);
             return 0;
         } else {
             elm_err_print(r.error);
