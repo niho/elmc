@@ -1,5 +1,5 @@
 /*
-** Elm standalone interpreter.
+** Elm standalone compiler.
 ** Copyright (C) 2020 Niklas Holmgren. See Copyright Notice in elm.h
 */
 
@@ -12,7 +12,7 @@
 #include "eparse.h"
 
 #ifndef ELM_PROGNAME
-#define ELM_PROGNAME    "elm"
+#define ELM_PROGNAME    "elmc"
 #endif
 
 #ifndef ELM_VERSION
@@ -27,7 +27,7 @@ static const char *progname = ELM_PROGNAME;
 
 
 static void print_usage(void) {
-    printf("usage: %s [options] [script]\n"
+    printf("usage: %s [options] [filenames]\n"
             "Available options are:\n"
             "  -v        show version information\n"
             "  --        stop handling options\n"
@@ -39,34 +39,6 @@ static void print_version(void) {
     printf("%s (%s)", ELM_VERSION, ELMC_VERSION);
     printf("\n");
 }
-
-/*static void elmL_loadfile(InputStream *stream, const char *filename) {
-    FILE *fp = fopen(filename, "rb");
-    if (fp == NULL) {
-        printf("File not found: %s\n", filename);
-        exit(1);
-    }
-
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    rewind(fp);
-
-    char *buffer = (char *) malloc(sizeof(char) * size);
-    if (buffer == NULL) {
-        printf("Memory error");
-        exit(1);
-    }
-
-    size_t result = fread(buffer, 1, size, fp);
-    if (result != size) {
-        printf("Reading error");
-        exit(1);
-    }
-
-    fclose(fp);
-
-    elmZ_init(stream, buffer, size);
-}*/
 
 static int handle_script(char **argv) {
     const char *fname = argv[0];
@@ -106,5 +78,4 @@ int main (int argc, char **argv) {
     } 
     return 0;
 }
-
 

@@ -1,3 +1,6 @@
 *.o
 *.swp
-build
+src/elm
+src/elmc
+src/test
+src/libelm.a
