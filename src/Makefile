@@ -1,5 +1,5 @@
 
-PLAT= Darwin
+PLAT= guess
 
 CC= gcc -std=gnu99
 CFLAGS= -Wall -Wextra $(SYSCFLAGS)
@@ -17,10 +17,12 @@ AR= ar rcu
 RANLIB= ranlib
 MKDIR= mkdir -p
 RM= rm -f
+UNAME= uname
+MAKE= make
 
 ### END OF USER SETTINGS ###
 
-PLATS= macosx
+PLATS= guess generic linux macosx posix
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
@@ -80,14 +82,24 @@ $(BUILD_DIR)/%.s.o: %s
 	$(AS) $(ASFLAGS) -c -o $@ $<
 
 clean:
-	$(RM) $(ALL_T) $(ALL_O) $(BUILD_DIR)
+	$(RM) $(ALL_T) $(ALL_O)
+
+ALL= all
 
 guess:
 	@$(MAKE) `$(UNAME)`
 
+generic: $(ALL)
+
+Linux linux:
+	$(MAKE) $(ALL) SYSCFLAGS="-DELM_USE_LINUX"
+
 Darwin macos macosx:
-	make all SYSCFLAGS="-DELM_USE_MACOSX"
+	$(MAKE) $(ALL) SYSCFLAGS="-DELM_USE_MACOSX"
+
+posix:
+	$(MAKE) $(ALL) SYSCFLAGS="-DELM_USE_POSIX"
 
 
-.PHONY : default all clean o a depend
+.PHONY : default all $(PLATS) clean o a depend
 

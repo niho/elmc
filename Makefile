@@ -1,7 +1,7 @@
 
 PLAT= guess
 
-PLATS= guess macosx
+PLATS= guess generic linux macosx posix
 
 INSTALL_TOP= /usr/local
 INSTALL_BIN= $(INSTALL_TOP)/bin
